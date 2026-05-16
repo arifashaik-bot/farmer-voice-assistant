@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer's Voice Assistant - Gemma 4 Good Hackathon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Crimson+Text:ital@0;1&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-dark: #1a472a;
+            --primary-green: #2d5a27;
+            --accent-green: #4a7c3f;
+            --cream: #f5f0e8;
+            --warm-tan: #e8dcc4;
+            --accent-orange: #e67e22;
+            --accent-gold: #d4af37;
+            --text-dark: #1a1a1a;
+            --text-light: #666666;
+            --success: #27ae60;
+            --error: #e74c3c;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-green) 50%, #1f4d2b 100%);
+            color: var(--text-dark);
+        }
+
+        /* Animated background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(ellipse at 20% 50%, rgba(74, 124, 63, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(230, 126, 34, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 0%, rgba(212, 175, 55, 0.05) 0%, transparent 60%);
+            animation: gradientShift 15s ease infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 0.1;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .particle:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 85%; top: 15%; animation-delay: 5s; }
+        .particle:nth-child(3) { left: 70%; top: 70%; animation-delay: 10s; }
+        .particle:nth-child(4) { left: 15%; top: 75%; animation-delay: 15s; }
+        .particle:nth-child(5) { left: 50%; top: 10%; animation-delay: 2s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-30px) rotate(5deg); }
+            50% { transform: translateY(-60px) rotate(10deg); }
+            75% { transform: translateY(-30px) rotate(5deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        .header {
+            padding: 2rem 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            backdrop-filter: blur(10px);
+            background: rgba(26, 71, 42, 0.7);
+            animation: slideDown 0.8s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--cream);
+            margin: 0.5rem 0;
+            letter-spacing: -1px;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .header .emoji {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+            animation: bounce 3s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .header p {
+            color: var(--warm-tan);
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin: 0.5rem 0 0;
+        }
+
+        /* Main content */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+            gap: 2rem;
+            overflow-y: auto;
+        }
+
+        /* Mic button - Hero element */
+        .mic-button {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-green) 0%, #3d6d38 100%);
+            border: none;
+            cursor: pointer;
+            font-size: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 10px 40px rgba(74, 124, 63, 0.4),
+                inset -2px -2px 5px rgba(0, 0, 0, 0.2),
+                inset 2px 2px 5px rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.7) rotateY(0deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateY(0deg);
+            }
+        }
+
+        .mic-button:hover {
+            transform: scale(1.08);
+            box-shadow: 
+                0 15px 50px rgba(74, 124, 63, 0.6),
+                inset -2px -2px 5px rgba(0, 0, 0, 0.2),
+                inset 2px 2px 5px rgba(255, 255, 255, 0.15);
+        }
+
+        .mic-button:active {
+            transform: scale(0.95);
+            box-shadow: 
+                0 5px 20px rgba(74, 124, 63, 0.3),
+                inset -2px -2px 8px rgba(0, 0, 0, 0.3),
+                inset 2px 2px 8px rgba(255, 255, 255, 0.05);
+        }
+
+        .mic-button.listening {
+            background: linear-gradient(135deg, var(--accent-orange) 0%, #d35400 100%);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 
+                    0 10px 40px rgba(230, 126, 34, 0.4),
+                    inset -2px -2px 5px rgba(0, 0, 0, 0.2),
+                    inset 2px 2px 5px rgba(255, 255, 255, 0.1),
+                    0 0 0 0 rgba(230, 126, 34, 0.4);
+            }
+            50% {
+                box-shadow: 
+                    0 10px 40px rgba(230, 126, 34, 0.4),
+                    inset -2px -2px 5px rgba(0, 0, 0, 0.2),
+                    inset 2px 2px 5px rgba(255, 255, 255, 0.1),
+                    0 0 0 20px rgba(230, 126, 34, 0);
+            }
+        }
+
+        .mic-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .status-text {
+            color: var(--cream);
+            font-size: 1.1rem;
+            font-weight: 500;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 250px;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .status-text.active {
+            color: var(--accent-orange);
+        }
+
+        /* Response display */
+        .response-box {
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-width: 500px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .response-label {
+            font-size: 0.85rem;
+            color: var(--warm-tan);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .response-text {
+            color: var(--cream);
+            font-size: 1rem;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        /* Feature buttons grid */
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 1rem;
+            width: 100%;
+            max-width: 500px;
+            padding: 0 1rem;
+        }
+
+        .feature-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: rgba(245, 240, 232, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 12px;
+            cursor: pointer;
+            color: var(--cream);
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+            min-height: 100px;
+        }
+
+        .feature-button:hover {
+            background: rgba(212, 175, 55, 0.15);
+            border-color: rgba(212, 175, 55, 0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.2);
+        }
+
+        .feature-button:active {
+            transform: translateY(-2px);
+        }
+
+        .feature-button.active {
+            background: rgba(212, 175, 55, 0.25);
+            border-color: var(--accent-gold);
+        }
+
+        .feature-button-emoji {
+            font-size: 2rem;
+        }
+
+        .feature-button-text {
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        /* Wave animation */
+        .wave-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+            height: 40px;
+            margin: 1rem 0;
+        }
+
+        .wave-bar {
+            width: 3px;
+            background: linear-gradient(180deg, var(--accent-orange) 0%, var(--accent-green) 100%);
+            border-radius: 2px;
+            animation: wave 0.6s ease-in-out infinite;
+        }
+
+        .wave-bar:nth-child(1) { animation-delay: 0s; height: 10px; }
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; height: 20px; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; height: 30px; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; height: 40px; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; height: 30px; }
+        .wave-bar:nth-child(6) { animation-delay: 0.5s; height: 20px; }
+        .wave-bar:nth-child(7) { animation-delay: 0.6s; height: 10px; }
+
+        @keyframes wave {
+            0%, 100% { height: 5px; }
+            50% { height: 40px; }
+        }
+
+        /* Transcript */
+        .transcript {
+            color: var(--warm-tan);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--warm-tan);
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(212, 175, 55, 0.1);
+            background: rgba(26, 71, 42, 0.3);
+        }
+
+        .footer a {
+            color: var(--accent-gold);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer a:hover {
+            color: var(--accent-orange);
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(212, 175, 55, 0.2);
+            border-top-color: var(--accent-gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error state */
+        .error {
+            color: var(--error);
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Success state */
+        .success {
+            animation: scaleIn 0.5s ease-out;
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Responsive */
+        @media (max-height: 600px) {
+            .mic-button {
+                width: 100px;
+                height: 100px;
+                font-size: 2.5rem;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .button-grid {
+                gap: 0.8rem;
+            }
+
+            .feature-button {
+                min-height: 80px;
+                padding: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 1.5rem 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .content {
+                padding: 1.5rem 1rem;
+                gap: 1.5rem;
+            }
+
+            .mic-button {
+                width: 120px;
+                height: 120px;
+                font-size: 3rem;
+            }
+
+            .button-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .response-box {
+                padding: 1rem;
+                max-width: 100%;
+            }
+        }
+
+        /* Language selector dropdown */
+        .language-selector {
+            position: absolute;
+            top: 120px;
+            background: rgba(26, 71, 42, 0.95);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            animation: slideDown 0.3s ease-out;
+            max-width: 200px;
+        }
+
+        .language-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .language-option {
+            padding: 1rem;
+            background: none;
+            border: none;
+            color: var(--cream);
+            cursor: pointer;
+            text-align: left;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+            transition: all 0.2s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .language-option:last-child {
+            border-bottom: none;
+        }
+
+        .language-option:hover {
+            background: rgba(212, 175, 55, 0.2);
+            padding-left: 1.5rem;
+        }
+
+        .language-option.active {
+            background: rgba(212, 175, 55, 0.3);
+            color: var(--accent-gold);
+        }
+
+        /* Offline indicator */
+        .offline-indicator {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(39, 174, 96, 0.2);
+            border: 1px solid rgba(39, 174, 96, 0.5);
+            padding: 0.6rem 1rem;
+            border-radius: 20px;
+            color: #27ae60;
+            font-size: 0.85rem;
+            font-weight: 600;
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .offline-icon {
+            font-size: 1rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Hidden elements */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Focus states for accessibility */
+        button:focus {
+            outline: 2px solid var(--accent-gold);
+            outline-offset: 2px;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(212, 175, 55, 0.3);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(212, 175, 55, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated background particles -->
+    <div class="particles">
+        <div class="particle">🌾</div>
+        <div class="particle">🌿</div>
+        <div class="particle">🌽</div>
+        <div class="particle">🚜</div>
+        <div class="particle">🌱</div>
+    </div>
+
+    <!-- Main container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="emoji">🌾🌿</div>
+            <h1>Farmer's Voice Assistant</h1>
+            <p>✨ AI-Powered • Offline • Voice-Only ✨</p>
+        </header>
+
+        <!-- Main content -->
+        <div class="content">
+            <!-- Mic button -->
+            <button class="mic-button" id="micButton" aria-label="Click to speak" title="Click to start speaking">🎤</button>
+
+            <!-- Status text -->
+            <div class="status-text" id="statusText">Click the mic and speak</div>
+
+            <!-- Wave animation (hidden by default) -->
+            <div class="wave-container hidden" id="waveContainer">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+            </div>
+
+            <!-- Response display -->
+            <div class="response-box hidden" id="responseBox">
+                <div class="response-label">You said:</div>
+                <div class="transcript" id="userTranscript"></div>
+                <div class="response-label" style="margin-top: 1rem;">Response:</div>
+                <div class="response-text" id="responseText"></div>
+            </div>
+
+            <!-- Language selector dropdown -->
+            <div class="language-selector hidden" id="languageSelector">
+                <div class="language-list">
+                    <button class="language-option" data-lang="en-US">🇺🇸 English</button>
+                    <button class="language-option" data-lang="hi-IN">🇮🇳 Hindi</button>
+                    <button class="language-option" data-lang="sw-KE">🇰🇪 Swahili</button>
+                </div>
+            </div>
+
+            <!-- Offline mode indicator -->
+            <div class="offline-indicator" id="offlineIndicator">
+                <div class="offline-icon">📡</div>
+                <div class="offline-text">Offline Mode</div>
+            </div>
+
+            <!-- Feature buttons -->
+            <div class="button-grid">
+                <button class="feature-button" id="weatherBtn" aria-label="Get weather forecast">
+                    <div class="feature-button-emoji">☀️</div>
+                    <div class="feature-button-text">Weather</div>
+                </button>
+                <button class="feature-button" id="pestsBtn" aria-label="Get pest solutions">
+                    <div class="feature-button-emoji">🐛</div>
+                    <div class="feature-button-text">Pests</div>
+                </button>
+                <button class="feature-button" id="fertilizerBtn" aria-label="Get fertilizer advice">
+                    <div class="feature-button-emoji">🌱</div>
+                    <div class="feature-button-text">Fertilizer</div>
+                </button>
+                <button class="feature-button" id="pricesBtn" aria-label="Get crop prices">
+                    <div class="feature-button-emoji">💰</div>
+                    <div class="feature-button-text">Prices</div>
+                </button>
+                <button class="feature-button" id="repeatBtn" aria-label="Repeat last response">
+                    <div class="feature-button-emoji">🔄</div>
+                    <div class="feature-button-text">Repeat</div>
+                </button>
+                <button class="feature-button" id="slowBtn" aria-label="Toggle slow speech mode">
+                    <div class="feature-button-emoji">🐌</div>
+                    <div class="feature-button-text">Slow</div>
+                </button>
+                <button class="feature-button" id="languageBtn" aria-label="Change language">
+                    <div class="feature-button-emoji">🌍</div>
+                    <div class="feature-button-text">Language</div>
+                </button>
+                <button class="feature-button" id="helpBtn" aria-label="Get help tutorial">
+                    <div class="feature-button-emoji">📢</div>
+                    <div class="feature-button-text">Help</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+        🌾 <strong>Giving a voice to 500 million farmers</strong> who can't read.<br>
+        Built with 💚 for the <strong>Gemma 4 Good Hackathon</strong> — Digital Equity & Inclusivity
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // FARMING KNOWLEDGE BASE
+        // ==========================================
+        const farmingDB = {
+            weather: {
+                today: "Today is sunny with 32 degrees Celsius. No rain expected. Good day for farming.",
+                tomorrow: "Tomorrow will be partly cloudy with 30 degrees. 20% chance of light rain in evening.",
+                week: "This week will be mostly sunny. Wednesday might have light showers."
+            },
+            
+            pests: [
+                { keywords: ["small black insect", "aphid", "black bug", "insects"], response: "Those are aphids. Mix 10 milliliters neem oil with 1 liter water. Spray in evening. Repeat after 5 days." },
+                { keywords: ["white powder", "powdery mildew", "white on leaf", "fungus"], response: "That's powdery mildew. Remove affected leaves. Apply sulfur spray once a week." },
+                { keywords: ["hole in leaf", "caterpillar", "leaf eating", "worms"], response: "Caterpillars. Check plants daily. Remove manually. Apply neem spray every 5 days." },
+                { keywords: ["sticky", "scale", "yellow sticky", "scale insects"], response: "Scale insects. Mix 5 milliliters soap in 1 liter water. Spray on affected areas." },
+                { keywords: ["ant", "ants", "termite"], response: "Ants protect other pests. Control aphids first. Apply cinnamon powder around plant base." }
+            ],
+            
+            fertilizer: [
+                { keywords: ["rice", "paddy", "dhan"], response: "For rice per acre: Apply 40 kilograms Urea split in two doses. First at planting, second at 30 days." },
+                { keywords: ["corn", "maize", "makka"], response: "For corn per acre: Apply 50 kilograms Urea and 50 kilograms DAP at planting time." },
+                { keywords: ["wheat", "gehu"], response: "For wheat per acre: Apply 60 kilograms DAP and 40 kilograms potash per acre." },
+                { keywords: ["vegetable", "sabji", "tomato", "onion", "carrot", "lettuce"], response: "For vegetables per acre: Apply 20 tons farmyard manure plus 50 kilograms NPK." }
+            ],
+            
+            prices: [
+                { keywords: ["wheat", "gehu"], response: "Wheat price: 2400 rupees per quintal. Prices are stable this week." },
+                { keywords: ["rice", "paddy", "chawal"], response: "Rice price: 2100 rupees per quintal. Price expected to rise next month." },
+                { keywords: ["corn", "maize", "makka"], response: "Corn price: 2200 rupees per quintal. Good time to sell." },
+                { keywords: ["tomato", "tamatar"], response: "Tomato price: 30 rupees per kilogram. Prices are falling." },
+                { keywords: ["onion", "pyaj", "pyaaz"], response: "Onion price: 25 rupees per kilogram. Stable prices." }
+            ],
+            
+            general: [
+                { keywords: ["hello", "hi", "namaste", "namaskar"], response: "Namaste! I'm your farming assistant. Ask me about weather, pests, fertilizers, or crop prices." },
+                { keywords: ["thank", "thanks", "dhanyavad", "shukriya"], response: "You're welcome! Happy farming. Ask me anytime." },
+                { keywords: ["water", "irrigation", "paani"], response: "Best time to water is early morning or evening. Avoid afternoon watering in summer." }
+            ]
+        };
+
+        // ==========================================
+        // STATE MANAGEMENT
+        // ==========================================
+        let state = {
+            isListening: false,
+            lastResponse: '',
+            lastTranscript: '',
+            slowMode: false,
+            language: 'en-US',
+            currentFlow: null,
+            languages: ['en-US', 'hi-IN', 'sw-KE']
+        };
+
+        // ==========================================
+        // SPEECH RECOGNITION & SYNTHESIS SETUP
+        // ==========================================
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
+
+        // ==========================================
+        // DOM ELEMENTS
+        // ==========================================
+        const micButton = document.getElementById('micButton');
+        const statusText = document.getElementById('statusText');
+        const responseBox = document.getElementById('responseBox');
+        const userTranscript = document.getElementById('userTranscript');
+        const responseText = document.getElementById('responseText');
+        const waveContainer = document.getElementById('waveContainer');
+        const weatherBtn = document.getElementById('weatherBtn');
+        const pestsBtn = document.getElementById('pestsBtn');
+        const fertilizerBtn = document.getElementById('fertilizerBtn');
+        const pricesBtn = document.getElementById('pricesBtn');
+        const repeatBtn = document.getElementById('repeatBtn');
+        const slowBtn = document.getElementById('slowBtn');
+        const languageBtn = document.getElementById('languageBtn');
+        const helpBtn = document.getElementById('helpBtn');
+
+        // ==========================================
+        // INTELLIGENT RESPONSE MATCHING
+        // ==========================================
+        function findBestMatch(question, database) {
+            const words = question.toLowerCase().split(/\s+/);
+            let bestMatch = null;
+            let maxScore = 0;
+            
+            for (const item of database) {
+                let score = 0;
+                
+                // Exact keyword matches get high score
+                for (const keyword of item.keywords) {
+                    if (question.toLowerCase().includes(keyword.toLowerCase())) {
+                        score += 10;
+                    }
+                }
+                
+                // Partial word matches get lower score
+                for (const word of words) {
+                    for (const keyword of item.keywords) {
+                        if (keyword.toLowerCase().includes(word) || word.includes(keyword.toLowerCase())) {
+                            score += 5;
+                        }
+                    }
+                }
+                
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestMatch = item;
+                }
+            }
+            
+            return bestMatch ? bestMatch.response : "I didn't understand. Please ask about weather, pests, fertilizer, or prices.";
+        }
+
+        // ==========================================
+        // SPEECH SYNTHESIS
+        // ==========================================
+        function speak(text) {
+            // Cancel any ongoing speech
+            window.speechSynthesis.cancel();
+            
+            // Create utterance
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = state.language;
+            utterance.rate = state.slowMode ? 0.6 : 0.85;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            // Get voices
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Map languages to voice language codes
+            const langMap = {
+                'en-US': 'en',
+                'hi-IN': 'hi',
+                'sw-KE': 'sw'
+            };
+            
+            const voiceLang = langMap[state.language];
+            
+            // Find a voice that matches the language
+            let voice = voices.find(v => v.lang.includes(voiceLang));
+            
+            // If not found, try exact language code
+            if (!voice) {
+                voice = voices.find(v => v.lang.startsWith(state.language.split('-')[0]));
+            }
+            
+            // Fallback to any voice
+            if (!voice && voices.length > 0) {
+                voice = voices[0];
+            }
+            
+            // Set the voice
+            if (voice) {
+                utterance.voice = voice;
+            }
+            
+            // Speak
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // ==========================================
+        // SPEECH RECOGNITION HANDLERS
+        // ==========================================
+        recognition.onstart = () => {
+            state.isListening = true;
+            micButton.classList.add('listening');
+            statusText.textContent = '🔴 Listening... Speak now!';
+            statusText.classList.add('active');
+            waveContainer.classList.remove('hidden');
+            responseBox.classList.add('hidden');
+        };
+
+        recognition.onresult = (event) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript.toLowerCase() + ' ';
+                    state.lastTranscript = finalTranscript.trim();
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+            
+            const displayTranscript = state.lastTranscript || interimTranscript;
+            if (displayTranscript) {
+                statusText.textContent = `💭 "${displayTranscript}"`;
+            }
+            
+            // If we have final transcript, process it immediately
+            if (finalTranscript.trim()) {
+                recognition.stop();
+            }
+        };
+
+        recognition.onend = () => {
+            state.isListening = false;
+            micButton.classList.remove('listening');
+            waveContainer.classList.add('hidden');
+            
+            if (!state.lastTranscript || state.lastTranscript.trim() === '') {
+                statusText.textContent = 'No speech detected. Try again!';
+                setTimeout(() => {
+                    statusText.textContent = 'Click the mic and speak';
+                }, 2000);
+                return;
+            }
+            
+            // Process the transcript
+            processQuestion(state.lastTranscript);
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            statusText.textContent = `Error: ${event.error}. Try again.`;
+            statusText.classList.add('error');
+            micButton.classList.remove('listening');
+            waveContainer.classList.add('hidden');
+            recognition.stop();
+            setTimeout(() => statusText.classList.remove('error'), 2000);
+        };
+
+        // ==========================================
+        // QUESTION PROCESSING
+        // ==========================================
+        function processQuestion(question) {
+            let response = '';
+            
+            // Check which category the question falls into
+            if (isWeatherQuestion(question)) {
+                response = farmingDB.weather.today;
+            } else if (isPestQuestion(question)) {
+                response = findBestMatch(question, farmingDB.pests);
+            } else if (isFertilizerQuestion(question)) {
+                response = findBestMatch(question, farmingDB.fertilizer);
+            } else if (isPriceQuestion(question)) {
+                response = findBestMatch(question, farmingDB.prices);
+            } else {
+                response = getDefaultResponse(question);
+            }
+            
+            displayResponse(question, response);
+            speak(response);
+        }
+
+        // Get default response in current language
+        function getDefaultResponse(question) {
+            const responses = {
+                'en-US': `I didn't quite understand "${question}". Please ask about weather, pests, fertilizer, or crop prices.`,
+                'hi-IN': `मुझे "${question}" समझ नहीं आया। कृपया मौसम, कीटों, खाद या फसल की कीमतों के बारे में पूछें।`,
+                'bn-IN': `আমি "${question}" বুঝতে পারিনি। অনুগ্রহ করে আবহাওয়া, কীটপতঙ্গ, সার বা ফসলের দাম সম্পর্কে জিজ্ঞাসা করুন।`,
+                'ta-IN': `"${question}" என்பதை நான் புரிந்துகொள்ளவில்லை. தயவுசெய்து வானிலை, பூச்சிகள், உரம் அல்லது பயிர் விலைகள் பற்றி கேளுங்கள்.`,
+                'te-IN': `నేను "${question}" అర్థం చేసుకోలేను. దయచేసి వాతావరణం, పీడకలు, సారాలు లేదా పంట ధరల గురించి అడగండి.`,
+                'sw-KE': `Sikuelewa "${question}". Tafadhali uliza kuhusu tabia ya hewa, mbu, mbegu au bei ya maliwa.`
+            };
+            return responses[state.language] || responses['en-US'];
+        }
+
+        // Question category detection - multilingual
+        function isWeatherQuestion(q) {
+            const weatherKeywords = ['weather', 'rain', 'sunny', 'cloud', 'temperature', 'mausam', 'barish', 'taapman',
+                'weather', 'rain', 'mausam', 'brishti', 'grom', 'ondunga',
+                'kachal', 'varsha', 'hawa', 'wetter', 'mvua', 'tabia'];
+            return weatherKeywords.some(kw => q.toLowerCase().includes(kw));
+        }
+
+        function isPestQuestion(q) {
+            const pestKeywords = ['pest', 'insect', 'bug', 'disease', 'problem', 'kira', 'keede', 'poka', 'rog',
+                'pestu', 'insect', 'bug', 'ulimwengu', 'uchawi', 'mbu', 'kuku'];
+            return pestKeywords.some(kw => q.toLowerCase().includes(kw));
+        }
+
+        function isFertilizerQuestion(q) {
+            const fertilizerKeywords = ['fertilizer', 'compost', 'manure', 'nutrient', 'khad', 'khet', 'sar', 'poshan', 'bijanu',
+                'saar', 'poshan', 'sambhrama', 'mbegu', 'kuku', 'samadi'];
+            return fertilizerKeywords.some(kw => q.toLowerCase().includes(kw));
+        }
+
+        function isPriceQuestion(q) {
+            const priceKeywords = ['price', 'cost', 'rate', 'market', 'sell', 'daam', 'bhav', 'mulya', 'vil', 'kimar',
+                'mol', 'cost', 'bei', 'bei ya', 'bei ya soko'];
+            return priceKeywords.some(kw => q.toLowerCase().includes(kw));
+        }
+
+        // ==========================================
+        // DISPLAY RESPONSE
+        // ==========================================
+        function displayResponse(question, response) {
+            state.lastResponse = response;
+            userTranscript.textContent = `"${question}"`;
+            responseText.textContent = response;
+            responseBox.classList.remove('hidden');
+            statusText.textContent = '✅ Response ready';
+            statusText.classList.remove('active');
+        }
+
+        // ==========================================
+        // FEATURE BUTTON HANDLERS
+        // ==========================================
+        micButton.addEventListener('click', () => {
+            if (state.isListening) {
+                recognition.stop();
+                state.isListening = false;
+                micButton.classList.remove('listening');
+            } else {
+                state.lastTranscript = '';
+                state.isListening = true;
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log('Recognition already started:', e);
+                }
+            }
+        });
+
+        weatherBtn.addEventListener('click', () => {
+            const messages = {
+                'en-US': "Today is sunny with 32 degrees Celsius. No rain expected. Good day for farming.",
+                'hi-IN': "आज धूप है 32 डिग्री सेल्सियस के साथ। कोई बारिश की उम्मीद नहीं है। खेती के लिए अच्छा दिन है।",
+                'bn-IN': "আজ রৌদ্রোজ্জ্বল ৩২ ডিগ্রি সেলসিয়াসের সাথে। কোনো বৃষ্টি হওয়ার সম্ভাবনা নেই। চাষাবাদের জন্য ভালো দিন।",
+                'ta-IN': "இன்று 32 டிகிரி செல்சியাസ் கொண்ட வெயிலாக உள்ளது. மழை எதிர்பார்க்கப்படவில்லை. விவசாயத்திற்கு நல்ல நாள்.",
+                'te-IN': "ఈ రోజు 32 డిగ్రీల సెల్సియస్‌లో ఎండ ఉంది. వర్షం ఆశించబడదు. వ్యవసాయానికి మంచి రోజు.",
+                'sw-KE': "Leo ni jua linene na digrii 32 Celsius. Hakuna mvua iliyotarajiwa. Siku nzuri kwa ukulima."
+            };
+            const weatherQuestion = {
+                'en-US': 'What is the weather?',
+                'hi-IN': 'मौसम क्या है?',
+                'bn-IN': 'আবহাওয়া কী?',
+                'ta-IN': 'வானிலை என்ன?',
+                'te-IN': 'వాతావరణం ఎలా ఉంది?',
+                'sw-KE': 'Tabia ya hewa ni nini?'
+            };
+            displayResponse(weatherQuestion[state.language], messages[state.language]);
+            speak(messages[state.language]);
+        });
+
+        pestsBtn.addEventListener('click', () => {
+            const prompts = {
+                'en-US': "Please describe the pest or disease problem on your crop.",
+                'hi-IN': "कृपया अपनी फसल पर कीट या बीमारी की समस्या का वर्णन करें।",
+                'bn-IN': "আপনার ফসলের কীটপতঙ্গ বা রোগের সমস্যা বর্ণনা করুন।",
+                'ta-IN': "உங்கள் பயிரில் பூச்சி அல்லது நோய் சমস्या விவரிக்கவும்.",
+                'te-IN': "మీ పంట కీటకాలు లేదా వ్యాధులను వివరించండి.",
+                'sw-KE': "Tafadhali eleza matatizo ya mbu au ugonjwa katika mazao yako."
+            };
+            statusText.textContent = '🎤 ' + prompts[state.language];
+            speak(prompts[state.language]);
+            setTimeout(() => {
+                state.lastTranscript = '';
+                state.isListening = true;
+                try {
+                    recognition.stop();
+                    recognition.start();
+                } catch (e) {
+                    console.log('Starting recognition:', e);
+                }
+            }, 2500);
+        });
+
+        fertilizerBtn.addEventListener('click', () => {
+            const prompts = {
+                'en-US': "Which crop do you grow and how many acres?",
+                'hi-IN': "आप कौन सी फसल उगाते हैं और कितने एकड़ में?",
+                'bn-IN': "আপনি কী ফসল জন্মান এবং কত একর?",
+                'ta-IN': "நீங்கள் எந்த பயிரை பயிரிடுகிறீர்கள் மற்றும் எத்தனை ஏக்கர்?",
+                'te-IN': "మీరు ఏ పంటను పండిస్తారు మరియు ఎన్ని ఎకరలు?",
+                'sw-KE': "Ni mmea gani unayojenga na ekari ngapi?"
+            };
+            statusText.textContent = '🎤 ' + prompts[state.language];
+            speak(prompts[state.language]);
+            setTimeout(() => {
+                state.lastTranscript = '';
+                state.isListening = true;
+                try {
+                    recognition.stop();
+                    recognition.start();
+                } catch (e) {
+                    console.log('Starting recognition:', e);
+                }
+            }, 2500);
+        });
+
+        pricesBtn.addEventListener('click', () => {
+            const prompts = {
+                'en-US': "Which crop price would you like to know?",
+                'hi-IN': "आप किस फसल का मूल्य जानना चाहते हैं?",
+                'bn-IN': "আপনি কোন ফসলের দাম জানতে চান?",
+                'ta-IN': "நீங்கள் எந்த பயிரின் விலை அறிய விரும்புகிறீர்கள்?",
+                'te-IN': "మీరు ఏ పంట ధర తెలుసుకోవాలనుకుంటున్నారు?",
+                'sw-KE': "Ni mmea gani bei unayotaka kujua?"
+            };
+            statusText.textContent = '🎤 ' + prompts[state.language];
+            speak(prompts[state.language]);
+            setTimeout(() => {
+                state.lastTranscript = '';
+                state.isListening = true;
+                try {
+                    recognition.stop();
+                    recognition.start();
+                } catch (e) {
+                    console.log('Starting recognition:', e);
+                }
+            }, 2500);
+        });
+
+        repeatBtn.addEventListener('click', () => {
+            if (state.lastResponse) {
+                speak(state.lastResponse);
+            } else {
+                const msgs = {
+                    'en-US': "No response to repeat. Ask a question first.",
+                    'hi-IN': "दोहराने के लिए कोई प्रतिक्रिया नहीं है। पहले एक सवाल पूछें।",
+                    'bn-IN': "পুনরাবৃত্তি করার কোনো প্রতিক্রিয়া নেই। প্রথমে একটি প্রশ্ন করুন।",
+                    'ta-IN': "திரும்பக கூற எந்த பதிலும் இல்லை. முதலில் ஒரு கேள்வி கேளுங்கள்.",
+                    'te-IN': "పునరావృతం చేయడానికి ఎటువంటి ప్రతిక్రియ లేదు. ముందుగా ప్రశ్న అడగండి.",
+                    'sw-KE': "Hakuna jibu la kurudia. Uliza swali kwanza."
+                };
+                speak(msgs[state.language]);
+            }
+        });
+
+        slowBtn.addEventListener('click', () => {
+            state.slowMode = !state.slowMode;
+            slowBtn.classList.toggle('active');
+            const msgs = {
+                'en-US': state.slowMode ? "Slow mode enabled" : "Slow mode disabled",
+                'hi-IN': state.slowMode ? "धीमी गति सक्षम" : "धीमी गति अक्षम",
+                'bn-IN': state.slowMode ? "ধীর মোড সক্ষম" : "ধীর মোড অক্ষম",
+                'ta-IN': state.slowMode ? "மெதுவான பயன்முறை இயக்கப்பட்டு" : "மெதுவான பயன்முறை முடக்கப்பட்டு",
+                'te-IN': state.slowMode ? "నెమ్మది మోడ్ ఎనేబుల్ చేయబడింది" : "నెమ్మది మోడ్ నిష్క్రియం చేయబడింది",
+                'sw-KE': state.slowMode ? "Hali ya polepole imewezeshwa" : "Hali ya polepole imefungwa"
+            };
+            speak(msgs[state.language]);
+        });
+
+        languageBtn.addEventListener('click', () => {
+            const selector = document.getElementById('languageSelector');
+            const isHidden = selector.classList.contains('hidden');
+            
+            if (isHidden) {
+                selector.classList.remove('hidden');
+                updateLanguageOptions();
+            } else {
+                selector.classList.add('hidden');
+            }
+        });
+
+        function updateLanguageOptions() {
+            const options = document.querySelectorAll('.language-option');
+            options.forEach(option => {
+                if (option.dataset.lang === state.language) {
+                    option.classList.add('active');
+                } else {
+                    option.classList.remove('active');
+                }
+            });
+        }
+
+        document.querySelectorAll('.language-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const newLang = option.dataset.lang;
+                state.language = newLang;
+                recognition.lang = newLang;
+                
+                const langSelector = document.getElementById('languageSelector');
+                langSelector.classList.add('hidden');
+                updateLanguageOptions();
+                
+                const langNames = {
+                    'en-US': 'English',
+                    'hi-IN': 'Hindi',
+                    'sw-KE': 'Swahili'
+                };
+                
+                const confirmMessages = {
+                    'en-US': `Language changed to ${langNames[newLang]}`,
+                    'hi-IN': `भाषा ${langNames[newLang]} में बदल दी गई`,
+                    'sw-KE': `Lugha imebadilishwa kuwa ${langNames[newLang]}`
+                };
+                
+                speak(confirmMessages[newLang]);
+            });
+        });
+
+        helpBtn.addEventListener('click', () => {
+            const helpTexts = {
+                'en-US': "Welcome to Farmer's Voice Assistant! Click the microphone button and speak your question about weather, pests, fertilizer, or prices. The assistant will understand and speak back the answer. You can also use the quick buttons below the microphone. Use the language button to switch languages. Use slow mode for slower speech.",
+                'hi-IN': "किसान की आवाज सहायक में आपका स्वागत है! माइक्रोफोन बटन पर क्लिक करें और मौसम, कीटों, खाद या कीमतों के बारे में अपना सवाल बोलें। सहायक समझेगा और जवाब बोलेगा। आप माइक्रोफोन के नीचे त्वरित बटन का भी उपयोग कर सकते हैं।",
+                'bn-IN': "কৃষক ভয়েস সহায়কে স্বাগতম! মাইক্রোফোন বোতাম ক্লিক করুন এবং আবহাওয়া, কীটপতঙ্গ, সার বা কীমত সম্পর্কে আপনার প্রশ্ন বলুন। সহায়ক বুঝবে এবং উত্তর বলবে। আপনি মাইক্রোফোনের নীচে দ্রুত বোতাম ব্যবহার করতে পারেন।",
+                'ta-IN': "விவசாயி குரல் உதவியாளரில் வரவேற்கிறோம்! மைக్रோผફोன் பொத்தான ক्लिक செய்து வானிலை, பூச்சிகள், உரம் அல்லது விலைகள் பற்றி உங்கள் கேள்வியைப் பேசுங்கள்। உதவியாளர் புரிந்துகொள்ளவும் பதிலை பேசவும் செய்வார். மைக்रோఫோனுக்குக் கீழ் உள்ள விரைந்த பொத்தানங்களைப் பயன்படுத்தலாம்.",
+                'te-IN': "రైతు వాయిస్ సహాయకకు స్వాగతం! మైక్రోఫోన్ బటన్‌ను క్లిక్ చేసి వాతావరణం, కీటకాలు, సారాలు లేదా ధరల గురించి మీ ప్రశ్న చెప్పండి. సహాయకుడు అర్థం చేసుకొని సమాధానం చెప్తాడు. మీరు మైక్రోఫోన్ క్రింద ఉన్న శీఘ్ర బటన్‌లను కూడా ఉపయోగించవచ్చు.",
+                'sw-KE': "Karibu kwa Farmer's Voice Assistant! Bonyeza kitufe cha aikofoni na sema swali lako kuhusu tabia ya hewa, mbu, mbegu au bei. Msaidizi atakuelewa na kusema jibu. Unaweza pia kutumia vitufe vya haraka chini ya aikofoni. Tumia kitufe cha lugha kubadilisha lugha."
+            };
+            displayResponse('How do I use this?', helpTexts[state.language]);
+            speak(helpTexts[state.language]);
+        });
+
+        // ==========================================
+        // INITIALIZE
+        // ==========================================
+        // Load voices when available
+        function loadVoices() {
+            const voices = window.speechSynthesis.getVoices();
+            console.log('Available voices:', voices.length);
+        }
+        
+        window.speechSynthesis.onvoiceschanged = () => {
+            loadVoices();
+        };
+        
+        // Load voices immediately
+        loadVoices();
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                micButton.click();
+            }
+        });
+
+        // Initial greeting on load
+        window.addEventListener('load', () => {
+            // Show offline mode indicator
+            const offlineIndicator = document.getElementById('offlineIndicator');
+            offlineIndicator.classList.remove('hidden');
+            
+            setTimeout(() => {
+                const greeting = state.language === 'en-US' ?
+                    "Welcome to Farmer's Voice Assistant. Click the microphone to start." :
+                    state.language === 'hi-IN' ?
+                    "किसान की आवाज सहायक में स्वागत है। शुरुआत करने के लिए माइक्रोफोन पर क्लिक करें।" :
+                    state.language === 'bn-IN' ?
+                    "কৃষক ভয়েস সহায়কে আপনাকে স্বাগতম। শুরু করতে মাইক্রোফোন ক্লিক করুন।" :
+                    state.language === 'ta-IN' ?
+                    "விவசாயி குரல் உதவியாளர் வரவேற்கிறது. தொடங்க மைக்ரோபோன் கிளிக் செய்யுங்கள்." :
+                    state.language === 'te-IN' ?
+                    "రైతు వాయిస్ సహాయకకు స్వాగతం. ప్రారంభించడానికి మైక్రోఫోన్ క్లిక్ చేయండి." :
+                    "Karibu kwa Farmer's Voice Assistant. Bonyeza aikofoni kuanza.";
+                speak(greeting);
+            }, 500);
+        });
+    </script>
+</body>
+</html>
