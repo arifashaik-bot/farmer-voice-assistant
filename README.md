@@ -2,9 +2,6 @@
 
 ## Giving a voice to 500 million farmers who can't read.
 
-[![Gemma 4 Hackathon](https://img.shields.io/badge/Gemma%204%20Good-Hackathon-green)](https://www.kaggle.com)
-[![Languages](https://img.shields.io/badge/Languages-3-orange)](https://github.com)
-
 ---
 
 ## 📌 What is this?
@@ -129,12 +126,6 @@ Intelligent keyword matching finds best answer from 50+ farming entries.
 ## 📄 License
 
 Apache 2.0 – free for commercial use
-
----
-
-## 🙏 Built For
-
-Gemma 4 Good Hackathon – Digital Equity & Inclusivity Track
 
 ---
 
