@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Farmer's Voice Assistant - Gemma 4 Good Hackathon</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Crimson+Text:ital@0;1&display=swap" rel="stylesheet">
@@ -752,11 +753,11 @@
             ],
             
             prices: [
-                { keywords: ["wheat", "gehu"], response: "Wheat price: 2400 rupees per quintal. Prices are stable this week." },
-                { keywords: ["rice", "paddy", "chawal"], response: "Rice price: 2100 rupees per quintal. Price expected to rise next month." },
-                { keywords: ["corn", "maize", "makka"], response: "Corn price: 2200 rupees per quintal. Good time to sell." },
-                { keywords: ["tomato", "tamatar"], response: "Tomato price: 30 rupees per kilogram. Prices are falling." },
-                { keywords: ["onion", "pyaj", "pyaaz"], response: "Onion price: 25 rupees per kilogram. Stable prices." }
+                { keywords: ["wheat", "gehu", "ngano"], response: "Wheat price: 2400 rupees per quintal. Prices are stable this week." },
+                { keywords: ["rice", "paddy", "chawal", "mpunga"], response: "Rice price: 2100 rupees per quintal. Price expected to rise next month." },
+                { keywords: ["corn", "maize", "makka", "mahindi"], response: "Corn price: 2200 rupees per quintal. Good time to sell." },
+                { keywords: ["tomato", "tamatar", "nyanya"], response: "Tomato price: 30 rupees per kilogram. Prices are falling." },
+                { keywords: ["onion", "pyaj", "pyaaz", "kitunguu"], response: "Onion price: 25 rupees per kilogram. Stable prices." }
             ],
             
             general: [
@@ -776,7 +777,8 @@
             slowMode: false,
             language: 'en-US',
             currentFlow: null,
-            languages: ['en-US', 'hi-IN', 'sw-KE']
+            languages: ['en-US', 'hi-IN', 'sw-KE'],
+            recognitionRunning: false
         };
 
         // ==========================================
@@ -784,7 +786,7 @@
         // ==========================================
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
-        recognition.continuous = true;
+        recognition.continuous = false;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
         recognition.maxAlternatives = 1;
@@ -808,59 +810,66 @@
         const helpBtn = document.getElementById('helpBtn');
 
         // ==========================================
-        // INTELLIGENT RESPONSE MATCHING
+        // INTELLIGENT RESPONSE MATCHING - COMPLETE FIX
         // ==========================================
         function findBestMatch(question, database) {
-            const words = question.toLowerCase().split(/\s+/);
-            let bestMatch = null;
-            let maxScore = 0;
+            if (!question || !database || database.length === 0) {
+                return null;
+            }
             
-            for (const item of database) {
-                let score = 0;
-                
-                // Exact keyword matches get high score
-                for (const keyword of item.keywords) {
-                    if (question.toLowerCase().includes(keyword.toLowerCase())) {
-                        score += 10;
+            const q = question.toLowerCase().trim();
+            
+            // Try exact substring match first (most reliable)
+            for (let i = 0; i < database.length; i++) {
+                const item = database[i];
+                for (let j = 0; j < item.keywords.length; j++) {
+                    const keyword = item.keywords[j].toLowerCase().trim();
+                    // Direct exact match
+                    if (q.includes(keyword) && keyword.length > 2) {
+                        return item.response;
                     }
                 }
+            }
+            
+            // Try word-by-word match
+            const words = q.split(/\s+/).filter(w => w.length > 2);
+            for (let i = 0; i < database.length; i++) {
+                const item = database[i];
+                let matchCount = 0;
                 
-                // Partial word matches get lower score
-                for (const word of words) {
-                    for (const keyword of item.keywords) {
-                        if (keyword.toLowerCase().includes(word) || word.includes(keyword.toLowerCase())) {
-                            score += 5;
+                for (let j = 0; j < item.keywords.length; j++) {
+                    const keyword = item.keywords[j].toLowerCase().trim();
+                    const keywordWords = keyword.split(/\s+/);
+                    
+                    for (let k = 0; k < words.length; k++) {
+                        for (let m = 0; m < keywordWords.length; m++) {
+                            if (words[k] === keywordWords[m]) {
+                                matchCount++;
+                            }
                         }
                     }
                 }
                 
-                if (score > maxScore) {
-                    maxScore = score;
-                    bestMatch = item;
+                if (matchCount > 0) {
+                    return item.response;
                 }
             }
             
-            return bestMatch ? bestMatch.response : "I didn't understand. Please ask about weather, pests, fertilizer, or prices.";
+            return null;
         }
 
         // ==========================================
         // SPEECH SYNTHESIS
         // ==========================================
         function speak(text) {
-            // Cancel any ongoing speech
             window.speechSynthesis.cancel();
-            
-            // Create utterance
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = state.language;
             utterance.rate = state.slowMode ? 0.6 : 0.85;
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
             
-            // Get voices
             const voices = window.speechSynthesis.getVoices();
-            
-            // Map languages to voice language codes
             const langMap = {
                 'en-US': 'en',
                 'hi-IN': 'hi',
@@ -868,34 +877,30 @@
             };
             
             const voiceLang = langMap[state.language];
-            
-            // Find a voice that matches the language
             let voice = voices.find(v => v.lang.includes(voiceLang));
             
-            // If not found, try exact language code
             if (!voice) {
                 voice = voices.find(v => v.lang.startsWith(state.language.split('-')[0]));
             }
             
-            // Fallback to any voice
             if (!voice && voices.length > 0) {
                 voice = voices[0];
             }
             
-            // Set the voice
             if (voice) {
                 utterance.voice = voice;
             }
             
-            // Speak
             window.speechSynthesis.speak(utterance);
         }
 
         // ==========================================
-        // SPEECH RECOGNITION HANDLERS
+        // SPEECH RECOGNITION HANDLERS - FIXED
         // ==========================================
         recognition.onstart = () => {
             state.isListening = true;
+            state.recognitionRunning = true;
+            state.lastTranscript = '';
             micButton.classList.add('listening');
             statusText.textContent = '🔴 Listening... Speak now!';
             statusText.classList.add('active');
@@ -912,25 +917,25 @@
                 
                 if (event.results[i].isFinal) {
                     finalTranscript += transcript.toLowerCase() + ' ';
-                    state.lastTranscript = finalTranscript.trim();
                 } else {
                     interimTranscript += transcript;
                 }
+            }
+            
+            // Update state with final transcript
+            if (finalTranscript.trim()) {
+                state.lastTranscript = finalTranscript.trim();
             }
             
             const displayTranscript = state.lastTranscript || interimTranscript;
             if (displayTranscript) {
                 statusText.textContent = `💭 "${displayTranscript}"`;
             }
-            
-            // If we have final transcript, process it immediately
-            if (finalTranscript.trim()) {
-                recognition.stop();
-            }
         };
 
         recognition.onend = () => {
             state.isListening = false;
+            state.recognitionRunning = false;
             micButton.classList.remove('listening');
             waveContainer.classList.add('hidden');
             
@@ -948,11 +953,13 @@
 
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
-            statusText.textContent = `Error: ${event.error}. Try again.`;
-            statusText.classList.add('error');
+            state.recognitionRunning = false;
+            state.isListening = false;
             micButton.classList.remove('listening');
             waveContainer.classList.add('hidden');
-            recognition.stop();
+            
+            statusText.textContent = `Error: ${event.error}. Try again.`;
+            statusText.classList.add('error');
             setTimeout(() => statusText.classList.remove('error'), 2000);
         };
 
@@ -960,62 +967,118 @@
         // QUESTION PROCESSING
         // ==========================================
         function processQuestion(question) {
+            console.log('Processing question:', question);
+            console.log('Language:', state.language);
+            
             let response = '';
             
             // Check which category the question falls into
             if (isWeatherQuestion(question)) {
+                console.log('Detected as: WEATHER');
                 response = farmingDB.weather.today;
             } else if (isPestQuestion(question)) {
+                console.log('Detected as: PEST');
                 response = findBestMatch(question, farmingDB.pests);
+                if (!response) {
+                    console.log('No pest match found, using default');
+                    response = getDefaultResponse('pest');
+                }
             } else if (isFertilizerQuestion(question)) {
+                console.log('Detected as: FERTILIZER');
                 response = findBestMatch(question, farmingDB.fertilizer);
+                if (!response) {
+                    console.log('No fertilizer match found, using default');
+                    response = getDefaultResponse('fertilizer');
+                }
             } else if (isPriceQuestion(question)) {
+                console.log('Detected as: PRICE');
                 response = findBestMatch(question, farmingDB.prices);
+                if (!response) {
+                    console.log('No price match found, using default');
+                    response = getDefaultResponse('price');
+                }
             } else {
-                response = getDefaultResponse(question);
+                console.log('Detected as: GENERAL');
+                response = findBestMatch(question, farmingDB.general);
+                if (!response) {
+                    console.log('No general match found, using default');
+                    response = getDefaultResponse('general');
+                }
             }
             
+            console.log('Final response:', response);
             displayResponse(question, response);
             speak(response);
         }
 
         // Get default response in current language
-        function getDefaultResponse(question) {
+        function getDefaultResponse(type) {
             const responses = {
-                'en-US': `I didn't quite understand "${question}". Please ask about weather, pests, fertilizer, or crop prices.`,
-                'hi-IN': `मुझे "${question}" समझ नहीं आया। कृपया मौसम, कीटों, खाद या फसल की कीमतों के बारे में पूछें।`,
-                'bn-IN': `আমি "${question}" বুঝতে পারিনি। অনুগ্রহ করে আবহাওয়া, কীটপতঙ্গ, সার বা ফসলের দাম সম্পর্কে জিজ্ঞাসা করুন।`,
-                'ta-IN': `"${question}" என்பதை நான் புரிந்துகொள்ளவில்லை. தயவுசெய்து வானிலை, பூச்சிகள், உரம் அல்லது பயிர் விலைகள் பற்றி கேளுங்கள்.`,
-                'te-IN': `నేను "${question}" అర్థం చేసుకోలేను. దయచేసి వాతావరణం, పీడకలు, సారాలు లేదా పంట ధరల గురించి అడగండి.`,
-                'sw-KE': `Sikuelewa "${question}". Tafadhali uliza kuhusu tabia ya hewa, mbu, mbegu au bei ya maliwa.`
+                'en-US': {
+                    pest: "I didn't quite understand your pest question. Please ask about a specific pest or describe the problem on your crop.",
+                    fertilizer: "I didn't understand your fertilizer question. Please tell me which crop you grow.",
+                    price: "I didn't understand your price question. Please ask about wheat, rice, corn, tomato, or onion.",
+                    general: "I didn't quite understand. Please ask about weather, pests, fertilizer, or crop prices."
+                },
+                'hi-IN': {
+                    pest: "मुझे आपका कीट सवाल समझ नहीं आया। कृपया किसी विशिष्ट कीट के बारे में पूछें।",
+                    fertilizer: "मुझे आपका खाद सवाल समझ नहीं आया। कृपया बताएं आप कौन सी फसल उगाते हैं।",
+                    price: "मुझे आपका कीमत सवाल समझ नहीं आया। कृपया गेहूं, चावल, मक्का, टमाटर या प्याज के बारे में पूछें।",
+                    general: "मुझे समझ नहीं आया। कृपया मौसम, कीटों, खाद या फसल की कीमतों के बारे में पूछें।"
+                },
+                'sw-KE': {
+                    pest: "Sikuelewa swali lako la mbu. Tafadhali uliza kuhusu mbu mahususi.",
+                    fertilizer: "Sikuelewa swali lako la mbegu. Tafadhali sema ni mmea gani unayojenga.",
+                    price: "Sikuelewa swali lako la bei. Tafadhali uliza kuhusu mahindi, mpunga, mahindi, nyanya au kitunguu.",
+                    general: "Sikuelewa. Tafadhali uliza kuhusu tabia ya hewa, mbu, mbegu au bei ya maliwa."
+                }
             };
-            return responses[state.language] || responses['en-US'];
+            return responses[state.language][type] || responses['en-US'][type];
         }
 
-        // Question category detection - multilingual
+        // Question category detection
         function isWeatherQuestion(q) {
-            const weatherKeywords = ['weather', 'rain', 'sunny', 'cloud', 'temperature', 'mausam', 'barish', 'taapman',
-                'weather', 'rain', 'mausam', 'brishti', 'grom', 'ondunga',
-                'kachal', 'varsha', 'hawa', 'wetter', 'mvua', 'tabia'];
-            return weatherKeywords.some(kw => q.toLowerCase().includes(kw));
+            const lq = q.toLowerCase();
+            const weatherKeywords = ['weather', 'rain', 'sunny', 'cloud', 'temperature', 'mausam', 'barish', 'taapman', 'brishti', 'mvua', 'tabia', 'matafsiri'];
+            for (let i = 0; i < weatherKeywords.length; i++) {
+                if (lq.includes(weatherKeywords[i])) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         function isPestQuestion(q) {
-            const pestKeywords = ['pest', 'insect', 'bug', 'disease', 'problem', 'kira', 'keede', 'poka', 'rog',
-                'pestu', 'insect', 'bug', 'ulimwengu', 'uchawi', 'mbu', 'kuku'];
-            return pestKeywords.some(kw => q.toLowerCase().includes(kw));
+            const lq = q.toLowerCase();
+            const pestKeywords = ['pest', 'insect', 'bug', 'disease', 'problem', 'kira', 'keede', 'poka', 'rog', 'mbu', 'kuku', 'issue', 'white', 'black', 'hole', 'leaf', 'damage', 'affected'];
+            for (let i = 0; i < pestKeywords.length; i++) {
+                if (lq.includes(pestKeywords[i])) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         function isFertilizerQuestion(q) {
-            const fertilizerKeywords = ['fertilizer', 'compost', 'manure', 'nutrient', 'khad', 'khet', 'sar', 'poshan', 'bijanu',
-                'saar', 'poshan', 'sambhrama', 'mbegu', 'kuku', 'samadi'];
-            return fertilizerKeywords.some(kw => q.toLowerCase().includes(kw));
+            const lq = q.toLowerCase();
+            const fertilizerKeywords = ['fertilizer', 'compost', 'manure', 'nutrient', 'khad', 'khet', 'sar', 'poshan', 'bijanu', 'saar', 'sambhrama', 'mbegu', 'samadi', 'apply', 'use', 'crop', 'acre'];
+            for (let i = 0; i < fertilizerKeywords.length; i++) {
+                if (lq.includes(fertilizerKeywords[i])) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         function isPriceQuestion(q) {
-            const priceKeywords = ['price', 'cost', 'rate', 'market', 'sell', 'daam', 'bhav', 'mulya', 'vil', 'kimar',
-                'mol', 'cost', 'bei', 'bei ya', 'bei ya soko'];
-            return priceKeywords.some(kw => q.toLowerCase().includes(kw));
+            const lq = q.toLowerCase();
+            const priceKeywords = ['price', 'cost', 'rate', 'market', 'sell', 'selling', 'daam', 'bhav', 'mulya', 'vil', 'kimar', 'mol', 'bei', 'matokeo', 'kitunguu', 'how much', 'rupees', 'rupee', 'value'];
+            for (let i = 0; i < priceKeywords.length; i++) {
+                if (lq.includes(priceKeywords[i])) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // ==========================================
@@ -1031,21 +1094,28 @@
         }
 
         // ==========================================
-        // FEATURE BUTTON HANDLERS
+        // FEATURE BUTTON HANDLERS - FIXED
         // ==========================================
         micButton.addEventListener('click', () => {
-            if (state.isListening) {
+            if (state.recognitionRunning) {
                 recognition.stop();
-                state.isListening = false;
-                micButton.classList.remove('listening');
-            } else {
-                state.lastTranscript = '';
-                state.isListening = true;
-                try {
-                    recognition.start();
-                } catch (e) {
-                    console.log('Recognition already started:', e);
-                }
+                state.recognitionRunning = false;
+                return;
+            }
+            
+            state.lastTranscript = '';
+            try {
+                recognition.start();
+            } catch (e) {
+                console.log('Recognition error:', e);
+                // Try again after a short delay
+                setTimeout(() => {
+                    try {
+                        recognition.start();
+                    } catch (e2) {
+                        console.log('Recognition still failing:', e2);
+                    }
+                }, 1000);
             }
         });
 
@@ -1053,17 +1123,11 @@
             const messages = {
                 'en-US': "Today is sunny with 32 degrees Celsius. No rain expected. Good day for farming.",
                 'hi-IN': "आज धूप है 32 डिग्री सेल्सियस के साथ। कोई बारिश की उम्मीद नहीं है। खेती के लिए अच्छा दिन है।",
-                'bn-IN': "আজ রৌদ্রোজ্জ্বল ৩২ ডিগ্রি সেলসিয়াসের সাথে। কোনো বৃষ্টি হওয়ার সম্ভাবনা নেই। চাষাবাদের জন্য ভালো দিন।",
-                'ta-IN': "இன்று 32 டிகிரி செல்சியাസ் கொண்ட வெயிலாக உள்ளது. மழை எதிர்பார்க்கப்படவில்லை. விவசாயத்திற்கு நல்ல நாள்.",
-                'te-IN': "ఈ రోజు 32 డిగ్రీల సెల్సియస్‌లో ఎండ ఉంది. వర్షం ఆశించబడదు. వ్యవసాయానికి మంచి రోజు.",
                 'sw-KE': "Leo ni jua linene na digrii 32 Celsius. Hakuna mvua iliyotarajiwa. Siku nzuri kwa ukulima."
             };
             const weatherQuestion = {
                 'en-US': 'What is the weather?',
                 'hi-IN': 'मौसम क्या है?',
-                'bn-IN': 'আবহাওয়া কী?',
-                'ta-IN': 'வானிலை என்ன?',
-                'te-IN': 'వాతావరణం ఎలా ఉంది?',
                 'sw-KE': 'Tabia ya hewa ni nini?'
             };
             displayResponse(weatherQuestion[state.language], messages[state.language]);
@@ -1074,21 +1138,16 @@
             const prompts = {
                 'en-US': "Please describe the pest or disease problem on your crop.",
                 'hi-IN': "कृपया अपनी फसल पर कीट या बीमारी की समस्या का वर्णन करें।",
-                'bn-IN': "আপনার ফসলের কীটপতঙ্গ বা রোগের সমস্যা বর্ণনা করুন।",
-                'ta-IN': "உங்கள் பயிரில் பூச்சி அல்லது நோய் சমস्या விவரிக்கவும்.",
-                'te-IN': "మీ పంట కీటకాలు లేదా వ్యాధులను వివరించండి.",
                 'sw-KE': "Tafadhali eleza matatizo ya mbu au ugonjwa katika mazao yako."
             };
             statusText.textContent = '🎤 ' + prompts[state.language];
             speak(prompts[state.language]);
             setTimeout(() => {
                 state.lastTranscript = '';
-                state.isListening = true;
                 try {
-                    recognition.stop();
                     recognition.start();
                 } catch (e) {
-                    console.log('Starting recognition:', e);
+                    console.log('Recognition error:', e);
                 }
             }, 2500);
         });
@@ -1097,21 +1156,16 @@
             const prompts = {
                 'en-US': "Which crop do you grow and how many acres?",
                 'hi-IN': "आप कौन सी फसल उगाते हैं और कितने एकड़ में?",
-                'bn-IN': "আপনি কী ফসল জন্মান এবং কত একর?",
-                'ta-IN': "நீங்கள் எந்த பயிரை பயிரிடுகிறீர்கள் மற்றும் எத்தனை ஏக்கர்?",
-                'te-IN': "మీరు ఏ పంటను పండిస్తారు మరియు ఎన్ని ఎకరలు?",
                 'sw-KE': "Ni mmea gani unayojenga na ekari ngapi?"
             };
             statusText.textContent = '🎤 ' + prompts[state.language];
             speak(prompts[state.language]);
             setTimeout(() => {
                 state.lastTranscript = '';
-                state.isListening = true;
                 try {
-                    recognition.stop();
                     recognition.start();
                 } catch (e) {
-                    console.log('Starting recognition:', e);
+                    console.log('Recognition error:', e);
                 }
             }, 2500);
         });
@@ -1120,21 +1174,16 @@
             const prompts = {
                 'en-US': "Which crop price would you like to know?",
                 'hi-IN': "आप किस फसल का मूल्य जानना चाहते हैं?",
-                'bn-IN': "আপনি কোন ফসলের দাম জানতে চান?",
-                'ta-IN': "நீங்கள் எந்த பயிரின் விலை அறிய விரும்புகிறீர்கள்?",
-                'te-IN': "మీరు ఏ పంట ధర తెలుసుకోవాలనుకుంటున్నారు?",
                 'sw-KE': "Ni mmea gani bei unayotaka kujua?"
             };
             statusText.textContent = '🎤 ' + prompts[state.language];
             speak(prompts[state.language]);
             setTimeout(() => {
                 state.lastTranscript = '';
-                state.isListening = true;
                 try {
-                    recognition.stop();
                     recognition.start();
                 } catch (e) {
-                    console.log('Starting recognition:', e);
+                    console.log('Recognition error:', e);
                 }
             }, 2500);
         });
@@ -1146,9 +1195,6 @@
                 const msgs = {
                     'en-US': "No response to repeat. Ask a question first.",
                     'hi-IN': "दोहराने के लिए कोई प्रतिक्रिया नहीं है। पहले एक सवाल पूछें।",
-                    'bn-IN': "পুনরাবৃত্তি করার কোনো প্রতিক্রিয়া নেই। প্রথমে একটি প্রশ্ন করুন।",
-                    'ta-IN': "திரும்பக கூற எந்த பதிலும் இல்லை. முதலில் ஒரு கேள்வி கேளுங்கள்.",
-                    'te-IN': "పునరావృతం చేయడానికి ఎటువంటి ప్రతిక్రియ లేదు. ముందుగా ప్రశ్న అడగండి.",
                     'sw-KE': "Hakuna jibu la kurudia. Uliza swali kwanza."
                 };
                 speak(msgs[state.language]);
@@ -1161,9 +1207,6 @@
             const msgs = {
                 'en-US': state.slowMode ? "Slow mode enabled" : "Slow mode disabled",
                 'hi-IN': state.slowMode ? "धीमी गति सक्षम" : "धीमी गति अक्षम",
-                'bn-IN': state.slowMode ? "ধীর মোড সক্ষম" : "ধীর মোড অক্ষম",
-                'ta-IN': state.slowMode ? "மெதுவான பயன்முறை இயக்கப்பட்டு" : "மெதுவான பயன்முறை முடக்கப்பட்டு",
-                'te-IN': state.slowMode ? "నెమ్మది మోడ్ ఎనేబుల్ చేయబడింది" : "నెమ్మది మోడ్ నిష్క్రియం చేయబడింది",
                 'sw-KE': state.slowMode ? "Hali ya polepole imewezeshwa" : "Hali ya polepole imefungwa"
             };
             speak(msgs[state.language]);
@@ -1222,10 +1265,7 @@
             const helpTexts = {
                 'en-US': "Welcome to Farmer's Voice Assistant! Click the microphone button and speak your question about weather, pests, fertilizer, or prices. The assistant will understand and speak back the answer. You can also use the quick buttons below the microphone. Use the language button to switch languages. Use slow mode for slower speech.",
                 'hi-IN': "किसान की आवाज सहायक में आपका स्वागत है! माइक्रोफोन बटन पर क्लिक करें और मौसम, कीटों, खाद या कीमतों के बारे में अपना सवाल बोलें। सहायक समझेगा और जवाब बोलेगा। आप माइक्रोफोन के नीचे त्वरित बटन का भी उपयोग कर सकते हैं।",
-                'bn-IN': "কৃষক ভয়েস সহায়কে স্বাগতম! মাইক্রোফোন বোতাম ক্লিক করুন এবং আবহাওয়া, কীটপতঙ্গ, সার বা কীমত সম্পর্কে আপনার প্রশ্ন বলুন। সহায়ক বুঝবে এবং উত্তর বলবে। আপনি মাইক্রোফোনের নীচে দ্রুত বোতাম ব্যবহার করতে পারেন।",
-                'ta-IN': "விவசாயி குரல் உதவியாளரில் வரவேற்கிறோம்! மைக్रோผફोன் பொத்தான ক्लिक செய்து வானிலை, பூச்சிகள், உரம் அல்லது விலைகள் பற்றி உங்கள் கேள்வியைப் பேசுங்கள்। உதவியாளர் புரிந்துகொள்ளவும் பதிலை பேசவும் செய்வார். மைக்रோఫோனுக்குக் கீழ் உள்ள விரைந்த பொத்தানங்களைப் பயன்படுத்தலாம்.",
-                'te-IN': "రైతు వాయిస్ సహాయకకు స్వాగతం! మైక్రోఫోన్ బటన్‌ను క్లిక్ చేసి వాతావరణం, కీటకాలు, సారాలు లేదా ధరల గురించి మీ ప్రశ్న చెప్పండి. సహాయకుడు అర్థం చేసుకొని సమాధానం చెప్తాడు. మీరు మైక్రోఫోన్ క్రింద ఉన్న శీఘ్ర బటన్‌లను కూడా ఉపయోగించవచ్చు.",
-                'sw-KE': "Karibu kwa Farmer's Voice Assistant! Bonyeza kitufe cha aikofoni na sema swali lako kuhusu tabia ya hewa, mbu, mbegu au bei. Msaidizi atakuelewa na kusema jibu. Unaweza pia kutumia vitufe vya haraka chini ya aikofoni. Tumia kitufe cha lugha kubadilisha lugha."
+                'sw-KE': "Karibu kwa Farmer's Voice Assistant! Bonyeza kitufe cha aikofoni na sema swali lako kuhusu tabia ya hewa, mbu, mbegu au bei. Msaidizi atakuelewa na kusema jibu. Unaweza pia kutumia vitufe vya haraka chini ya aikofoni."
             };
             displayResponse('How do I use this?', helpTexts[state.language]);
             speak(helpTexts[state.language]);
@@ -1234,7 +1274,6 @@
         // ==========================================
         // INITIALIZE
         // ==========================================
-        // Load voices when available
         function loadVoices() {
             const voices = window.speechSynthesis.getVoices();
             console.log('Available voices:', voices.length);
@@ -1244,10 +1283,8 @@
             loadVoices();
         };
         
-        // Load voices immediately
         loadVoices();
 
-        // Keyboard support
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -1255,25 +1292,17 @@
             }
         });
 
-        // Initial greeting on load
         window.addEventListener('load', () => {
-            // Show offline mode indicator
             const offlineIndicator = document.getElementById('offlineIndicator');
             offlineIndicator.classList.remove('hidden');
             
             setTimeout(() => {
-                const greeting = state.language === 'en-US' ?
-                    "Welcome to Farmer's Voice Assistant. Click the microphone to start." :
-                    state.language === 'hi-IN' ?
-                    "किसान की आवाज सहायक में स्वागत है। शुरुआत करने के लिए माइक्रोफोन पर क्लिक करें।" :
-                    state.language === 'bn-IN' ?
-                    "কৃষক ভয়েস সহায়কে আপনাকে স্বাগতম। শুরু করতে মাইক্রোফোন ক্লিক করুন।" :
-                    state.language === 'ta-IN' ?
-                    "விவசாயி குரல் உதவியாளர் வரவேற்கிறது. தொடங்க மைக்ரோபோன் கிளிக் செய்யுங்கள்." :
-                    state.language === 'te-IN' ?
-                    "రైతు వాయిస్ సహాయకకు స్వాగతం. ప్రారంభించడానికి మైక్రోఫోన్ క్లిక్ చేయండి." :
-                    "Karibu kwa Farmer's Voice Assistant. Bonyeza aikofoni kuanza.";
-                speak(greeting);
+                const greeting = {
+                    'en-US': "Welcome to Farmer's Voice Assistant. Click the microphone to start.",
+                    'hi-IN': "किसान की आवाज सहायक में स्वागत है। शुरुआत करने के लिए माइक्रोफोन पर क्लिक करें।",
+                    'sw-KE': "Karibu kwa Farmer's Voice Assistant. Bonyeza aikofoni kuanza."
+                };
+                speak(greeting[state.language]);
             }, 500);
         });
     </script>
